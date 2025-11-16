@@ -211,9 +211,10 @@ function renderExecutiveSummary() {
     // Filter active resources
     const activeResources = state.resources.filter(r => r.is_active);
 
-    // Calculate Annual Contract Value - EXACT COPY from manager_report_screen.py lines 606-644
+    // Calculate Annual Contract Value - EXACT COPY from manager_report_screen.py lines 973-1011
+    // IMPORTANT: Use activeContracts only (not all contracts)
     let annualValue = 0.0;
-    state.contracts.forEach(contract => {
+    activeContracts.forEach(contract => {
         try {
             const startDateStr = contract.sow_start_date || '';
             const endDateStr = contract.sow_end_date || '';
