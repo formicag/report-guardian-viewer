@@ -95,17 +95,16 @@ async function fetchAPI(endpoint) {
 async function loadAllData() {
     showLoading();
     try {
-        const [contractsRes, posRes, resourcesRes, risksRes, mappingsRes, auditRes, forecastsRes] = await Promise.all([
+        // Load critical data first (must succeed)
+        const [contractsRes, posRes, resourcesRes, risksRes, mappingsRes] = await Promise.all([
             fetchAPI('/api/contracts'),
             fetchAPI('/api/purchase-orders'),
             fetchAPI('/api/resources'),
             fetchAPI('/api/risks'),
             fetchAPI('/api/po-mappings'),
-            fetchAPI('/api/audit?limit=200'),
-            fetchAPI('/api/forecasts'),
         ]);
 
-        // Validate responses
+        // Validate critical responses
         if (!contractsRes || !contractsRes.contracts) {
             throw new Error('Contracts API returned invalid response');
         }
@@ -127,8 +126,23 @@ async function loadAllData() {
         state.resources = resourcesRes.resources || [];
         state.risks = risksRes.risks || [];
         state.poMappings = mappingsRes.mappings || [];
-        state.auditRecords = (auditRes && auditRes.audit_records) ? auditRes.audit_records : [];
-        state.forecasts = (forecastsRes && forecastsRes.forecasts) ? forecastsRes.forecasts : [];
+
+        // Load optional data (failures won't break dashboard)
+        try {
+            const auditRes = await fetchAPI('/api/audit?limit=200');
+            state.auditRecords = (auditRes && auditRes.audit_records) ? auditRes.audit_records : [];
+        } catch (error) {
+            console.warn('Audit API failed (non-critical):', error);
+            state.auditRecords = [];
+        }
+
+        try {
+            const forecastsRes = await fetchAPI('/api/forecasts');
+            state.forecasts = (forecastsRes && forecastsRes.forecasts) ? forecastsRes.forecasts : [];
+        } catch (error) {
+            console.warn('Forecasts API failed (non-critical):', error);
+            state.forecasts = [];
+        }
 
         console.log('Data loaded:', {
             contracts: state.contracts.length,
