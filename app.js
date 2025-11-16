@@ -588,6 +588,76 @@ function renderRisksTab() {
 // ============================================
 // Hierarchy Tab
 // ============================================
+
+/**
+ * Generate HTML for a single resource in the hierarchy view
+ * Based on hierarchical_mappings.py reference implementation
+ */
+function generateResourceHTML(mapping, resourcesById, isActive) {
+    const resource = resourcesById[mapping.resource_id] || {};
+
+    const firstName = resource.first_name || '';
+    const lastName = resource.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Resource';
+    const jobTitle = resource.job_title || '';
+    const sellRate = resource.sell_rate_gbp || 0;
+    const marginPercentage = resource.margin_percentage || 0;
+
+    // Format created_date: "2025-11-12 04:05:28" -> "12/11/2025"
+    let assignmentStart = '';
+    if (mapping.created_date) {
+        try {
+            const datePart = mapping.created_date.split(' ')[0]; // "2025-11-12"
+            const [year, month, day] = datePart.split('-');
+            assignmentStart = `${day}/${month}/${year}`;
+        } catch (e) {
+            console.error('Error parsing created_date:', mapping.created_date, e);
+            assignmentStart = 'Unknown';
+        }
+    } else {
+        assignmentStart = 'Unknown';
+    }
+
+    // Format end_date if it exists
+    let assignmentEnd = 'Present';
+    if (mapping.end_date && mapping.end_date !== '') {
+        assignmentEnd = formatDate(mapping.end_date);
+    }
+
+    const assignmentDisplay = `${assignmentStart} → ${assignmentEnd}`;
+
+    // Resource employment status (is the person employed by us?)
+    const resourceActive = resource.is_active;
+    const resourceStatusIcon = resourceActive ? '🟢' : '🔴';
+    const resourceStatusText = resourceActive ? 'Active' : 'Inactive';
+
+    // Mapping assignment status (are they assigned to THIS PO?)
+    const mappingStatus = mapping.status || 'Active';
+    const mappingStatusIcon = mappingStatus === 'Active' ? '🟢' : '🔴';
+
+    return `
+        <div class="resource-item ${isActive ? 'active' : 'ended'}">
+            <div class="resource-header">
+                <span class="resource-icon">${isActive ? '✅' : '⚠️'}</span>
+                <span class="resource-name">${escapeHtml(fullName)}</span>
+                <span class="job-title"> - ${escapeHtml(jobTitle)}</span>
+            </div>
+            <div class="resource-details">
+                <div class="detail-line">
+                    💷 Sell: £${sellRate.toFixed(2)}/day | Margin: ${marginPercentage.toFixed(1)}%
+                </div>
+                <div class="detail-line">
+                    Employment: ${resourceStatusIcon} ${resourceStatusText} |
+                    Assignment: ${mappingStatusIcon} ${mappingStatus}
+                </div>
+                <div class="detail-line">
+                    📅 Assigned to this PO: ${assignmentDisplay}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function renderHierarchyTab() {
     // IMPORTANT: Old data (pre-v1.2.3) doesn't have status field - default to Active
     const activeMappings = state.poMappings.filter(m => {
@@ -674,54 +744,75 @@ function renderHierarchyTab() {
                 </summary>
         `;
 
-        contractPOs.forEach(po => {
+        // Sort POs by start date
+        const sortedPOs = contractPOs.sort((a, b) => {
+            return (a.po_period_start_date || '').localeCompare(b.po_period_start_date || '');
+        });
+
+        sortedPOs.forEach(po => {
             const poMappings = mappingsByPo[po.po_id] || [];
-            // Count active mappings - handle old data (pre-v1.2.3)
-            const activePoMappings = poMappings.filter(m => {
+
+            // Separate active and ended mappings
+            const activeMappings = [];
+            const endedMappings = [];
+
+            poMappings.forEach(m => {
                 const status = m.status || "Active";
                 const hasEndDate = m.end_date && m.end_date !== "";
-                return status === "Active" && !hasEndDate;
-            }).length;
-
-            html += `
-                <div class="po-section">
-                    <div class="po-header">
-                        <strong>📦 PO: ${escapeHtml(po.po_number || '')}</strong>
-                        (${poMappings.length} total mappings, ${activePoMappings} active)
-                    </div>
-            `;
-
-            poMappings.forEach(mapping => {
-                const resource = resourcesById[mapping.resource_id];
-                if (!resource) return;
-
-                // Handle old data: default status to Active if missing
-                const mappingStatus = mapping.status || "Active";
-                const mappingEndDate = mapping.end_date || "";
-                const isActiveMappingval = mappingStatus === "Active" && !mappingEndDate;
-
-                // Resource employment status (different from mapping status!)
-                const resourceActive = resource.is_active;
-
-                // Choose icons based on BOTH statuses
-                const resourceStatusIcon = resourceActive ? '🟢' : '🔴';
-                const mappingStatusIcon = isActiveMappingval ? '✅' : '❌';
-
-                html += `
-                    <div class="resource-item">
-                        ${mappingStatusIcon} <strong>${escapeHtml(resource.first_name || '')} ${escapeHtml(resource.last_name || '')}</strong>
-                        - ${escapeHtml(resource.job_title || '')}
-                        <br>
-                        <span style="font-size: 0.9em; color: #666;">
-                            Resource: ${resourceStatusIcon} ${resourceActive ? 'Employed' : 'Terminated'}
-                            | Mapping: ${isActiveMappingval ? '✅ Active on this PO' : '❌ Left this PO'}
-                            ${mappingEndDate ? ` (ended ${mappingEndDate})` : ''}
-                        </span>
-                    </div>
-                `;
+                if (status === "Ended" || hasEndDate) {
+                    endedMappings.push(m);
+                } else {
+                    activeMappings.push(m);
+                }
             });
 
-            html += `</div>`;
+            const poStatus = po.po_status || 'received';
+            const poStatusIcon = poStatus === 'received' ? '🟢' : '⚪';
+
+            html += `
+                <details class="po-section" open>
+                    <summary class="po-header">
+                        <span class="icon">📋</span>
+                        <span>PO ${escapeHtml(po.po_number || '')} - ${escapeHtml(po.po_period_label || '')}</span>
+                        <span class="badge">${poStatusIcon} PO: ${escapeHtml(poStatus)}</span>
+                        <span class="po-period">(${formatDate(po.po_period_start_date)} - ${formatDate(po.po_period_end_date)})</span>
+                        <span class="count">[${poMappings.length} Total, ${activeMappings.length} Active, ${endedMappings.length} Ended]</span>
+                    </summary>
+                    <div class="po-content">
+            `;
+
+            // Show active mappings
+            if (activeMappings.length > 0) {
+                html += `
+                        <div class="mapping-group active-mappings">
+                            <div class="group-header">✅ ACTIVE MAPPINGS (${activeMappings.length}):</div>
+                `;
+                activeMappings.forEach(mapping => {
+                    html += generateResourceHTML(mapping, resourcesById, true);
+                });
+                html += `</div>`;
+            }
+
+            // Show ended mappings
+            if (endedMappings.length > 0) {
+                html += `
+                        <div class="mapping-group ended-mappings">
+                            <div class="group-header">🔴 ENDED MAPPINGS (${endedMappings.length}):</div>
+                `;
+                endedMappings.forEach(mapping => {
+                    html += generateResourceHTML(mapping, resourcesById, false);
+                });
+                html += `</div>`;
+            }
+
+            if (poMappings.length === 0) {
+                html += `<div class="no-mappings">No resources mapped to this PO</div>`;
+            }
+
+            html += `
+                    </div>
+                </details>
+            `;
         });
 
         html += `</details>`;
