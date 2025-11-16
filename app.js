@@ -40,8 +40,26 @@ function formatDate(dateStr) {
 
 function parseDate(dateStr) {
     if (!dateStr) return null;
-    const [day, month, year] = dateStr.split('/');
-    return new Date(year, month - 1, day);
+    try {
+        // Handle DD/MM/YYYY format
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const year = parseInt(parts[2], 10);
+            if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                return new Date(year, month - 1, day);
+            }
+        }
+        // Fallback to ISO date
+        const isoDate = new Date(dateStr);
+        if (!isNaN(isoDate.getTime())) {
+            return isoDate;
+        }
+    } catch (e) {
+        console.error('Date parse error:', dateStr, e);
+    }
+    return null;
 }
 
 function showLoading() {
@@ -87,17 +105,44 @@ async function loadAllData() {
             fetchAPI('/api/forecasts'),
         ]);
 
+        // Validate responses
+        if (!contractsRes || !contractsRes.contracts) {
+            throw new Error('Contracts API returned invalid response');
+        }
+        if (!posRes || !posRes.purchase_orders) {
+            throw new Error('Purchase Orders API returned invalid response');
+        }
+        if (!resourcesRes || !resourcesRes.resources) {
+            throw new Error('Resources API returned invalid response');
+        }
+        if (!risksRes || !risksRes.risks) {
+            throw new Error('Risks API returned invalid response');
+        }
+        if (!mappingsRes || !mappingsRes.mappings) {
+            throw new Error('PO Mappings API returned invalid response');
+        }
+
         state.contracts = contractsRes.contracts || [];
         state.purchaseOrders = posRes.purchase_orders || [];
         state.resources = resourcesRes.resources || [];
         state.risks = risksRes.risks || [];
         state.poMappings = mappingsRes.mappings || [];
-        state.auditRecords = auditRes.audit_records || [];
-        state.forecasts = forecastsRes.forecasts || [];
+        state.auditRecords = (auditRes && auditRes.audit_records) ? auditRes.audit_records : [];
+        state.forecasts = (forecastsRes && forecastsRes.forecasts) ? forecastsRes.forecasts : [];
+
+        console.log('Data loaded:', {
+            contracts: state.contracts.length,
+            pos: state.purchaseOrders.length,
+            resources: state.resources.length,
+            risks: state.risks.length,
+            mappings: state.poMappings.length,
+            audit: state.auditRecords.length,
+            forecasts: state.forecasts.length
+        });
 
         renderDashboard();
     } catch (error) {
-        showError('Failed to load data from API. Please try again.');
+        showError(`Failed to load data: ${error.message}`);
         console.error('Load data error:', error);
     } finally {
         hideLoading();
@@ -166,35 +211,57 @@ function renderExecutiveSummary() {
     // Filter active resources
     const activeResources = state.resources.filter(r => r.is_active);
 
-    // Calculate Annual Contract Value
-    let annualValue = 0;
-    activeContracts.forEach(contract => {
-        const startDate = parseDate(contract.sow_start_date);
-        const endDate = parseDate(contract.sow_end_date);
-        const totalValue = parseFloat(contract.sow_value_gbp || 0);
+    // Calculate Annual Contract Value - EXACT COPY from manager_report_screen.py lines 606-644
+    let annualValue = 0.0;
+    state.contracts.forEach(contract => {
+        try {
+            const startDateStr = contract.sow_start_date || '';
+            const endDateStr = contract.sow_end_date || '';
+            const totalValue = parseFloat(contract.sow_value_gbp || 0);
 
-        if (!startDate || !endDate || totalValue === 0) return;
-        if (endDate < startDate) return;
+            if (!startDateStr || !endDateStr || totalValue === 0) return;
 
-        const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-        if (totalDays <= 0) return;
+            const startDate = parseDate(startDateStr);
+            const endDate = parseDate(endDateStr);
 
-        const dailyRate = totalValue / totalDays;
+            if (!startDate || !endDate) return;
 
-        const overlapStart = startDate > yearStart ? startDate : yearStart;
-        const overlapEnd = endDate < yearEnd ? endDate : yearEnd;
+            // Guard rails
+            if (endDate < startDate) return;
 
-        if (overlapEnd < overlapStart) return;
+            // Total days in SOW (inclusive)
+            const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            if (totalDays <= 0) return;
 
-        const daysInYear = Math.floor((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
-        const sowAnnualAmount = dailyRate * daysInYear;
-        annualValue += sowAnnualAmount;
+            // Daily rate
+            const dailyRate = totalValue / totalDays;
+
+            // Calculate overlap with target year
+            const overlapStart = startDate > yearStart ? startDate : yearStart;
+            const overlapEnd = endDate < yearEnd ? endDate : yearEnd;
+
+            if (overlapEnd < overlapStart) return;
+
+            // Days in the target year
+            const daysInYear = Math.floor((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Annual amount for this SOW
+            const sowAnnualAmount = dailyRate * daysInYear;
+            annualValue += Math.round(sowAnnualAmount * 100) / 100; // Round to 2 decimals
+
+        } catch (e) {
+            console.error('Error calculating SOW annual value:', contract, e);
+        }
     });
 
-    // Calculate margin statistics
-    const activeMargins = activeResources
-        .filter(r => r.margin_percentage !== null && r.margin_percentage !== undefined)
-        .map(r => parseFloat(r.margin_percentage));
+    // Calculate margin statistics - margin_percentage exists in API
+    const activeMargins = [];
+    activeResources.forEach(r => {
+        const margin = r.margin_percentage;
+        if (margin !== null && margin !== undefined && !isNaN(parseFloat(margin))) {
+            activeMargins.push(parseFloat(margin));
+        }
+    });
 
     const contractorsCount = activeMargins.length;
     const permanentCount = activeResources.length - contractorsCount;
@@ -424,9 +491,13 @@ function renderResourcesTab() {
     const activeCount = state.resources.filter(r => r.is_active).length;
     const inactiveCount = state.resources.length - activeCount;
 
-    const margins = state.resources
-        .filter(r => r.margin_percentage !== null && r.margin_percentage !== undefined)
-        .map(r => parseFloat(r.margin_percentage));
+    const margins = [];
+    state.resources.forEach(r => {
+        const margin = r.margin_percentage;
+        if (margin !== null && margin !== undefined && !isNaN(parseFloat(margin))) {
+            margins.push(parseFloat(margin));
+        }
+    });
 
     const contractorsCount = margins.length;
     const permanentCount = state.resources.length - contractorsCount;
@@ -715,12 +786,22 @@ function renderAuditTab() {
 
     const recentAudits = state.auditRecords.filter(a => {
         try {
-            const timestamp = new Date(a.timestamp);
+            if (!a.timestamp) return false;
+            // Handle ISO format: "2025-11-12T04:05:28.123Z" or "2025-11-12T04:05:28"
+            const timestamp = new Date(a.timestamp.replace('Z', '+00:00'));
+            if (isNaN(timestamp.getTime())) return false;
             return timestamp > weekAgo;
-        } catch {
+        } catch (e) {
+            console.error('Audit timestamp parse error:', a.timestamp, e);
             return false;
         }
-    }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
+    }).sort((a, b) => {
+        try {
+            return new Date(b.timestamp) - new Date(a.timestamp);
+        } catch {
+            return 0;
+        }
+    }).slice(0, 50);
 
     const summaryHtml = `
         <p><strong>Total Changes: ${recentAudits.length}</strong></p>
