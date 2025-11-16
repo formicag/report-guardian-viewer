@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colibri Digital - Report Guardian Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Password Protection Screen -->
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <img src="https://www.colibridigital.io/wp-content/uploads/2024/04/colibri-hummingbird-logo.png"
+                 alt="Colibri Digital" class="login-logo">
+            <h1>Report Guardian Dashboard</h1>
+            <p class="login-subtitle">Read-only access to project data</p>
+            <form id="login-form">
+                <input type="password"
+                       id="password-input"
+                       placeholder="Enter password"
+                       autocomplete="off"
+                       required>
+                <button type="submit">Access Dashboard</button>
+                <p id="login-error" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard (hidden until authenticated) -->
+    <div id="dashboard" class="dashboard-container" style="display: none;">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <img src="https://www.colibridigital.io/wp-content/uploads/2024/04/colibri-hummingbird-logo.png"
+                     alt="Colibri Digital" class="header-logo">
+                <div>
+                    <h1>Report Guardian Dashboard</h1>
+                    <p class="header-subtitle">All Customers - <span id="current-date"></span></p>
+                </div>
+            </div>
+            <button id="refresh-btn" class="refresh-btn" title="Refresh Data">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                Refresh
+            </button>
+        </header>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Loading dashboard data...</p>
+        </div>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <!-- Executive Summary -->
+            <section id="executive-summary" class="card">
+                <h2>Executive Summary (Active Only)</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="metric-acv">£0</div>
+                        <div class="metric-label">Annual Contract Value (2025)</div>
+                        <div class="metric-sublabel">Active SOWs overlapping 2025</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="metric-sows">0</div>
+                        <div class="metric-label">Active SOWs</div>
+                        <div class="metric-sublabel">End date ≥ today</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="metric-resources">0</div>
+                        <div class="metric-label">Active Resources</div>
+                        <div class="metric-sublabel" id="metric-resources-breakdown">0 contractors, 0 permanent</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="metric-margin">0%</div>
+                        <div class="metric-label">Avg Contractor Margin</div>
+                        <div class="metric-sublabel">Active contractors only</div>
+                    </div>
+                </div>
+                <div id="customer-breakdown" class="customer-breakdown"></div>
+            </section>
+
+            <!-- Navigation Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="sows">Statements of Work</button>
+                <button class="tab-btn" data-tab="pos">Purchase Orders</button>
+                <button class="tab-btn" data-tab="resources">Resources</button>
+                <button class="tab-btn" data-tab="risks">Risks/Issues</button>
+                <button class="tab-btn" data-tab="hierarchy">PO-Resource Hierarchy</button>
+                <button class="tab-btn" data-tab="forecasts">PO Forecasting</button>
+                <button class="tab-btn" data-tab="audit">Recent Changes</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="tab-content">
+                <!-- SOWs Tab -->
+                <div id="sows-tab" class="tab-content active">
+                    <div class="card">
+                        <h2>Statements of Work</h2>
+                        <div id="sows-summary" class="summary-box"></div>
+                        <div id="monthly-summary" class="monthly-summary"></div>
+                        <div class="table-container">
+                            <table id="sows-table">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>SOW Short Name</th>
+                                        <th>Value</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Duration (Months)</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POs Tab -->
+                <div id="pos-tab" class="tab-content">
+                    <div class="card">
+                        <h2>Purchase Orders</h2>
+                        <div id="pos-summary" class="summary-box"></div>
+                        <div class="table-container">
+                            <table id="pos-table">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>SOW Name</th>
+                                        <th>PO Number</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>PO Status</th>
+                                        <th>Period Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resources Tab -->
+                <div id="resources-tab" class="tab-content">
+                    <div class="card">
+                        <h2>Resource Assignments</h2>
+                        <div id="resources-summary" class="summary-box"></div>
+                        <div class="table-container">
+                            <table id="resources-table">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>First Name</th>
+                                        <th>Last Name</th>
+                                        <th>Job Title</th>
+                                        <th>Margin %</th>
+                                        <th>Active</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risks Tab -->
+                <div id="risks-tab" class="tab-content">
+                    <div class="card">
+                        <h2>Risks/Issues/Decisions Tracker</h2>
+                        <div id="risks-summary" class="summary-box"></div>
+                        <div class="table-container">
+                            <table id="risks-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Description</th>
+                                        <th>Impact</th>
+                                        <th>Current Status</th>
+                                        <th>Target Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hierarchy Tab -->
+                <div id="hierarchy-tab" class="tab-content">
+                    <div class="card">
+                        <h2>PO-Resource Hierarchy</h2>
+                        <div id="hierarchy-summary" class="summary-box"></div>
+                        <div id="hierarchy-content"></div>
+                    </div>
+                </div>
+
+                <!-- Forecasts Tab -->
+                <div id="forecasts-tab" class="tab-content">
+                    <div class="card">
+                        <h2>PO Forecasting</h2>
+                        <div id="forecasts-summary" class="summary-box"></div>
+                        <div class="table-container">
+                            <table id="forecasts-table">
+                                <thead>
+                                    <tr>
+                                        <th>Created</th>
+                                        <th>Customer</th>
+                                        <th>Period</th>
+                                        <th>Total Cost</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Tab -->
+                <div id="audit-tab" class="tab-content">
+                    <div class="card">
+                        <h2>Recent Changes (Last 7 Days)</h2>
+                        <div id="audit-summary" class="summary-box"></div>
+                        <div class="table-container">
+                            <table id="audit-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date/Time</th>
+                                        <th>Table</th>
+                                        <th>Operation</th>
+                                        <th>Field Changed</th>
+                                        <th>Old Value</th>
+                                        <th>New Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            Generated automatically by <strong>Colibri Digital Report Guardian</strong> · © 2025 Colibri Digital
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
