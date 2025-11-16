@@ -8,25 +8,27 @@
 }
 
 :root {
-    --primary-color: #00A9B7;
-    --primary-dark: #008A95;
-    --text-primary: #111;
-    --text-secondary: #666;
-    --text-muted: #999;
-    --bg-light: #f5f9fa;
-    --bg-white: #ffffff;
-    --border-color: #e0e0e0;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
-    --red: #dc3545;
-    --amber: #ffc107;
-    --green: #28a745;
+    --primary-color: #00D9FF;
+    --primary-dark: #00A8CC;
+    --text-primary: #E8E8E8;
+    --text-secondary: #B0B0B0;
+    --text-muted: #808080;
+    --bg-dark: #0D1117;
+    --bg-darker: #161B22;
+    --bg-card: #1C2128;
+    --bg-light: #21262D;
+    --border-color: #30363D;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.6);
+    --red: #FF6B6B;
+    --amber: #FFD93D;
+    --green: #6BCF7F;
     --transition: all 0.3s ease;
 }
 
 body {
     font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0D1117 0%, #161B22 100%);
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
@@ -44,10 +46,11 @@ body {
 }
 
 .login-box {
-    background: var(--bg-white);
+    background: var(--bg-card);
     padding: 40px;
     border-radius: 16px;
     box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
     text-align: center;
     max-width: 400px;
     width: 100%;
@@ -155,7 +158,7 @@ body {
    Header
    ============================================ */
 .dashboard-header {
-    background: var(--bg-white);
+    background: var(--bg-card);
     padding: 20px 40px;
     box-shadow: var(--shadow);
     display: flex;
@@ -254,7 +257,7 @@ body {
 }
 
 .card {
-    background: var(--bg-white);
+    background: var(--bg-card);
     border-radius: 12px;
     padding: 30px;
     box-shadow: var(--shadow);
@@ -346,7 +349,7 @@ body {
 
 .tab-btn {
     padding: 12px 24px;
-    background: var(--bg-white);
+    background: var(--bg-card);
     border: 2px solid var(--border-color);
     border-radius: 8px;
     font-size: 14px;
@@ -436,7 +439,7 @@ tr:hover {
 }
 
 tr:nth-child(even) {
-    background: #f9f9f9;
+    background: var(--bg-darker);
 }
 
 tr:nth-child(even):hover {
@@ -460,15 +463,18 @@ tr:nth-child(even):hover {
 
 /* RAG status */
 .rag-red {
-    background-color: #ffe6e6 !important;
+    background-color: rgba(255, 107, 107, 0.2) !important;
+    border-left: 3px solid var(--red);
 }
 
 .rag-amber {
-    background-color: #fff3cd !important;
+    background-color: rgba(255, 217, 61, 0.2) !important;
+    border-left: 3px solid var(--amber);
 }
 
 .rag-green {
-    background-color: #e6f7e6 !important;
+    background-color: rgba(107, 207, 127, 0.2) !important;
+    border-left: 3px solid var(--green);
 }
 
 /* ============================================
@@ -484,7 +490,7 @@ tr:nth-child(even):hover {
     border: 2px solid var(--border-color);
     border-radius: 8px;
     overflow: hidden;
-    background: white;
+    background: var(--bg-card);
 }
 
 .sow-header {
@@ -500,7 +506,7 @@ tr:nth-child(even):hover {
 }
 
 .sow-header:hover {
-    background: #e8f4f5;
+    background: var(--bg-card);
 }
 
 .sow-title {
@@ -518,13 +524,15 @@ tr:nth-child(even):hover {
 }
 
 .badge.status-active {
-    background: #e6f7e6;
+    background: rgba(107, 207, 127, 0.2);
     color: var(--green);
+    border: 1px solid var(--green);
 }
 
 .badge.status-inactive {
-    background: #ffe6e6;
+    background: rgba(255, 107, 107, 0.2);
     color: var(--red);
+    border: 1px solid var(--red);
 }
 
 .count {
@@ -536,9 +544,9 @@ tr:nth-child(even):hover {
 /* PO Level */
 .po-section {
     margin: 12px 20px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
-    background: #fafafa;
+    background: var(--bg-darker);
 }
 
 .po-header {
@@ -549,14 +557,14 @@ tr:nth-child(even):hover {
     align-items: center;
     gap: 10px;
     font-size: 14px;
-    background: #f5f5f5;
+    background: var(--bg-light);
     border-radius: 6px;
     transition: var(--transition);
     list-style: none;
 }
 
 .po-header:hover {
-    background: #efefef;
+    background: var(--bg-card);
 }
 
 .po-period {
@@ -567,7 +575,7 @@ tr:nth-child(even):hover {
 
 .po-content {
     padding: 16px;
-    background: white;
+    background: var(--bg-card);
 }
 
 /* Mapping Groups */
@@ -585,33 +593,33 @@ tr:nth-child(even):hover {
     color: var(--text-primary);
     margin-bottom: 12px;
     padding: 8px 12px;
-    background: #f9f9f9;
+    background: var(--bg-darker);
     border-left: 3px solid var(--primary-color);
     border-radius: 4px;
 }
 
 .active-mappings .group-header {
     border-left-color: var(--green);
-    background: #f0f9f0;
+    background: rgba(107, 207, 127, 0.1);
 }
 
 .ended-mappings .group-header {
-    border-left-color: #999;
-    background: #f5f5f5;
+    border-left-color: #808080;
+    background: rgba(128, 128, 128, 0.1);
 }
 
 /* Resource Items */
 .resource-item {
     margin-bottom: 12px;
     padding: 12px;
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     transition: var(--transition);
 }
 
 .resource-item:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     border-color: var(--primary-color);
 }
 
@@ -678,7 +686,7 @@ tr:nth-child(even):hover {
     padding: 20px;
     color: var(--text-secondary);
     font-size: 14px;
-    background: var(--bg-white);
+    background: var(--bg-card);
     border-top: 1px solid var(--border-color);
 }
 
