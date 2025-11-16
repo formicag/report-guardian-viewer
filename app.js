@@ -6,6 +6,9 @@ const CONFIG = {
     PASSWORD: 'azeez', // Hardcoded password - change this to revoke access
 };
 
+console.log('🚀 Report Guardian Dashboard Loaded');
+console.log('📍 API Base URL:', CONFIG.API_BASE_URL);
+
 // ============================================
 // State Management
 // ============================================
@@ -79,15 +82,18 @@ function showError(message) {
 // ============================================
 async function fetchAPI(endpoint) {
     const url = `${CONFIG.API_BASE_URL}${endpoint}`;
+    console.log(`🔵 FETCHING: ${url}`);
     try {
         const response = await fetch(url);
+        console.log(`📡 Response status for ${endpoint}:`, response.status, response.ok);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
+        console.log(`✅ Data received for ${endpoint}:`, data);
         return data;
     } catch (error) {
-        console.error(`Failed to fetch ${endpoint}:`, error);
+        console.error(`❌ Failed to fetch ${endpoint}:`, error);
         throw error;
     }
 }
@@ -144,7 +150,7 @@ async function loadAllData() {
             state.forecasts = [];
         }
 
-        console.log('Data loaded:', {
+        console.log('✅ DATA LOADED SUCCESSFULLY:', {
             contracts: state.contracts.length,
             pos: state.purchaseOrders.length,
             resources: state.resources.length,
@@ -153,8 +159,12 @@ async function loadAllData() {
             audit: state.auditRecords.length,
             forecasts: state.forecasts.length
         });
+        console.log('📊 Sample contract:', state.contracts[0]);
+        console.log('📊 Sample resource:', state.resources[0]);
 
+        console.log('🎨 RENDERING DASHBOARD...');
         renderDashboard();
+        console.log('✅ DASHBOARD RENDERED');
     } catch (error) {
         showError(`Failed to load data: ${error.message}`);
         console.error('Load data error:', error);
